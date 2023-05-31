@@ -21,6 +21,11 @@ else
     app.UseStaticFiles();
 }
 
+app.UseWebSockets(new WebSocketOptions
+{
+    KeepAliveInterval = TimeSpan.FromMinutes(5)
+});
+
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
