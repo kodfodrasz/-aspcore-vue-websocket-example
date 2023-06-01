@@ -58,12 +58,32 @@ public class WebSocketHub : IWebSocketHub, IHostedService, IDisposable
         }
     }
 
+    private readonly JsonSerializerOptions jsonOptions = new(JsonSerializerDefaults.Web);
+    private WeatherForecast[] Weather { get; set; } = Enumerable.Range(1, 5).Select(index => webapi.Controllers.WeatherForecastController.BuildForecast(index)).ToArray();
+
+    private async void PublishOnce(WebSocket ws)
+    {
+        string jsonString = JsonSerializer.Serialize(Weather, jsonOptions);
+        try
+        {
+            var bytes = System.Text.Encoding.UTF8.GetBytes(jsonString);
+            await ws.SendAsync(
+                bytes,
+                WebSocketMessageType.Text,
+                true,
+                CancellationToken.None);
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, $"Error while sending to websocket ${ws}");
+        }
+    }
+
     private async void Broadcast(object? state)
     {
-        var forecast = Enumerable.Range(1, 5).Select(index => webapi.Controllers.WeatherForecastController.BuildForecast(index)).ToArray();
+        Weather = Enumerable.Range(1, 5).Select(index => webapi.Controllers.WeatherForecastController.BuildForecast(index)).ToArray();
 
-        JsonSerializerOptions options = new(JsonSerializerDefaults.Web);
-        string jsonString = JsonSerializer.Serialize(forecast, options);
+        string jsonString = JsonSerializer.Serialize(Weather, jsonOptions);
 
         foreach (var s in sockets)
         {
@@ -93,22 +113,24 @@ public class WebSocketHub : IWebSocketHub, IHostedService, IDisposable
             }
             catch (Exception e)
             {
-                logger.LogError(e, $"Error while websocket ${s}");
+                logger.LogError(e, $"Error while sending to websocket ${s}");
             }
         }
     }
 
     public IDisposable RegisterWebsocket(WebSocket ws)
     {
-        return new WebSocetRegistrationCancellation(this, ws);
+        PublishOnce(ws);
+
+        return new WebSocketRegistrationCancellation(this, ws);
     }
 
-    private class WebSocetRegistrationCancellation : IDisposable
+    private class WebSocketRegistrationCancellation : IDisposable
     {
         private readonly WebSocketHub hub;
         private readonly WebSocket ws;
 
-        public WebSocetRegistrationCancellation(WebSocketHub websocketHub, WebSocket ws)
+        public WebSocketRegistrationCancellation(WebSocketHub websocketHub, WebSocket ws)
         {
             this.hub = websocketHub;
             this.ws = ws;

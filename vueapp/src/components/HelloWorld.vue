@@ -1,6 +1,6 @@
 <script setup lang="ts">
     //import { defineComponent } from 'vue';
-    import { Ref, ref, onMounted, watch, onBeforeUnmount } from 'vue'
+    import { Ref, ref, onMounted, onBeforeUnmount } from 'vue'
 
     type Forecasts = {
         date: string
@@ -37,7 +37,9 @@
                     post.value = forecasts;
                     loading.value = false;
                 }
-            } catch (error) { }
+            } catch (error) {
+                /* intentionally empty */
+            }
         };
         ws.onerror = (error) => {
             console.log("WebSocket error:", error);
