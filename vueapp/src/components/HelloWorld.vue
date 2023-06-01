@@ -1,6 +1,6 @@
 <script setup lang="ts">
     //import { defineComponent } from 'vue';
-    import { Ref, ref, onMounted, watch } from 'vue'
+    import { Ref, ref, onMounted, watch, onBeforeUnmount } from 'vue'
 
     type Forecasts = {
         date: string
@@ -8,12 +8,18 @@
 
     const loading: Ref<boolean> = ref(false)
     const post: Ref<null | Forecasts> = ref(null as null | Forecasts)
+    const websocket: Ref<WebSocket | null> = ref(null);
 
     onMounted(async () => {
         // fetch the data when the view is created and the data is
         // already being observed
         fetchData();
+        wsConnect();
     })
+    onBeforeUnmount(async () => {
+        wsDisconnect()
+    })
+
 
     function fetchData() {
         post.value = null;
@@ -26,6 +32,41 @@
                 loading.value = false;
                 return;
             });
+    }
+
+    function wsConnect() {
+        post.value = null;
+        loading.value = true;
+
+        var ws = new WebSocket('wss://localhost:7031/ws');
+
+        ws.onopen = (event) => {
+            console.log("WebSocket connection opened:", event);
+        };
+        ws.onmessage = (event) => {
+            console.log("WebSocket message received:", event.data);
+        };
+        ws.onerror = (error) => {
+            console.log("WebSocket error:", error);
+        };
+
+        const ping = setInterval(() => {
+            const msg = `ping ${Date.now()}`;
+            ws.send(msg)
+            console.log("WebSocket message sent:", msg);
+        }, 5000);
+
+        ws.onclose = (event) => {
+            clearTimeout(ping);
+            console.log("WebSocket connection closed:", event.code);
+        };
+
+        websocket.value = ws;
+    }
+
+    function wsDisconnect() {
+        websocket.value?.close(1000, "Goodbye");
+        websocket.value = null;
     }
 
     watch(() => '$route', fetchData)

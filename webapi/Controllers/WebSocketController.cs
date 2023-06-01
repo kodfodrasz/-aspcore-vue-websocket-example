@@ -1,6 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 
+using System.Collections.Concurrent;
 using System.Net.WebSockets;
+using System.Text.RegularExpressions;
+using System.Timers;
 
 namespace webapi.Controllers;
 
@@ -29,8 +32,12 @@ public class WebSocketController : ControllerBase
 
         while (!receiveResult.CloseStatus.HasValue)
         {
+            var str = System.Text.Encoding.UTF8.GetString(new ArraySegment<byte>(buffer, 0, receiveResult.Count));
+
+            var str2 = Regex.Replace(str, "^ping", "pong");
+
             await webSocket.SendAsync(
-                new ArraySegment<byte>(buffer, 0, receiveResult.Count),
+                System.Text.Encoding.UTF8.GetBytes(str2),
                 receiveResult.MessageType,
                 receiveResult.EndOfMessage,
                 CancellationToken.None);
