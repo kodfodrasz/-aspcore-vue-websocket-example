@@ -7,15 +7,24 @@ using System.Timers;
 
 namespace webapi.Controllers;
 
-#if true
 public class WebSocketController : ControllerBase
 {
+    private IWebSocketHub webSocketHub { get; }
+
+    public WebSocketController(IWebSocketHub webSocketHub)
+    {
+        this.webSocketHub = webSocketHub;
+    }
+
     [Route("/ws")]
     public async Task Get()
     {
         if (HttpContext.WebSockets.IsWebSocketRequest)
         {
             using var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
+            
+            using var subscription = webSocketHub.RegisterWebsocket(webSocket);
+
             await Echo(webSocket);
         }
         else
@@ -52,4 +61,3 @@ public class WebSocketController : ControllerBase
             CancellationToken.None);
     }
 }
-#endif
