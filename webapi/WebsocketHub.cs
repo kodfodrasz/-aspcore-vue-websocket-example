@@ -2,7 +2,11 @@
 
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Net.WebSockets;
+
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace webapi;
 
@@ -24,12 +28,12 @@ public class WebSocketHub : IWebSocketHub, IHostedService, IDisposable
         this.logger = logger;
     }
 
-    private TimeSpan AnnounceInterval { get; } = TimeSpan.FromSeconds(2);
+    private TimeSpan AnnounceInterval { get; } = TimeSpan.FromSeconds(5);
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
         logger.LogInformation("Background Service running.");
-        timer = new Timer(DoWork, null, TimeSpan.Zero, AnnounceInterval);
+        timer = new Timer(Broadcast, null, TimeSpan.Zero, AnnounceInterval);
 
         return Task.CompletedTask;
     }
@@ -42,11 +46,25 @@ public class WebSocketHub : IWebSocketHub, IHostedService, IDisposable
 
     public void Dispose()
     {
+        timer?.Change(Timeout.Infinite, 0);
         timer?.Dispose();
+
+        lock (socketsLock)
+        {
+            foreach (var s in sockets)
+            {
+                s.Abort();
+            }
+        }
     }
 
-    private async void DoWork(object? state)
+    private async void Broadcast(object? state)
     {
+        var forecast = Enumerable.Range(1, 5).Select(index => webapi.Controllers.WeatherForecastController.BuildForecast(index)).ToArray();
+
+        JsonSerializerOptions options = new(JsonSerializerDefaults.Web);
+        string jsonString = JsonSerializer.Serialize(forecast, options);
+
         foreach (var s in sockets)
         {
             try
@@ -65,8 +83,7 @@ public class WebSocketHub : IWebSocketHub, IHostedService, IDisposable
                 }
                 else if (s.State == WebSocketState.Open)
                 {
-                    string msg = $"Hi socket ${s.GetHashCode()} ${DateTime.Now}";
-                    var bytes = System.Text.Encoding.UTF8.GetBytes(msg);
+                    var bytes = System.Text.Encoding.UTF8.GetBytes(jsonString);
                     await s.SendAsync(
                         bytes,
                         WebSocketMessageType.Text,

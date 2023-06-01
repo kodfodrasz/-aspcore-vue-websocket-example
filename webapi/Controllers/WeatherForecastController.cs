@@ -25,7 +25,7 @@ public class WeatherForecastController : ControllerBase
         .ToArray();
     }
 
-    private static WeatherForecast BuildForecast(int index)
+    public static WeatherForecast BuildForecast(int index)
     {
         return new WeatherForecast
         {

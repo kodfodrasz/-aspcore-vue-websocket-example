@@ -13,26 +13,11 @@
     onMounted(async () => {
         // fetch the data when the view is created and the data is
         // already being observed
-        fetchData();
         wsConnect();
     })
     onBeforeUnmount(async () => {
         wsDisconnect()
     })
-
-
-    function fetchData() {
-        post.value = null;
-        loading.value = true;
-
-        fetch('weatherforecast')
-            .then(r => r.json())
-            .then(json => {
-                post.value = json as Forecasts;
-                loading.value = false;
-                return;
-            });
-    }
 
     function wsConnect() {
         post.value = null;
@@ -45,6 +30,14 @@
         };
         ws.onmessage = (event) => {
             console.log("WebSocket message received:", event.data);
+
+            try {
+                var forecasts = JSON.parse(event.data) as Forecasts
+                if (forecasts) {
+                    post.value = forecasts;
+                    loading.value = false;
+                }
+            } catch (error) { }
         };
         ws.onerror = (error) => {
             console.log("WebSocket error:", error);
@@ -54,7 +47,7 @@
             const msg = `ping ${Date.now()}`;
             ws.send(msg)
             console.log("WebSocket message sent:", msg);
-        }, 5000);
+        }, 60000);
 
         ws.onclose = (event) => {
             clearTimeout(ping);
@@ -68,8 +61,6 @@
         websocket.value?.close(1000, "Goodbye");
         websocket.value = null;
     }
-
-    watch(() => '$route', fetchData)
 </script>
 
 <template>
