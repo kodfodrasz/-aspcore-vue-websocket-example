@@ -23,7 +23,7 @@
         post.value = null;
         loading.value = true;
 
-        var ws = new WebSocket('wss://localhost:7031/ws');
+        var ws = new WebSocket('ws://localhost:5043/ws');
 
         ws.onopen = (event) => {
             console.log("WebSocket connection opened:", event);
