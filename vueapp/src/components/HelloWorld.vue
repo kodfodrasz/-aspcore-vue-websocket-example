@@ -23,7 +23,9 @@
         post.value = null;
         loading.value = true;
 
-        var ws = new WebSocket('ws://localhost:5043/ws');
+        const url = new URL('/api/ws', location.href);
+        url.protocol = url.protocol.replace('http', 'ws');
+        var ws = new WebSocket(url);
 
         ws.onopen = (event) => {
             console.log("WebSocket connection opened:", event);

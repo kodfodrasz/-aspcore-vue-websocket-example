@@ -16,7 +16,7 @@ public class WebSocketController : ControllerBase
         this.webSocketHub = webSocketHub;
     }
 
-    [Route("/ws")]
+    [Route("/api/ws")]
     public async Task Get()
     {
         if (HttpContext.WebSockets.IsWebSocketRequest)
