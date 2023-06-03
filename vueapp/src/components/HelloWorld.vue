@@ -1,70 +1,11 @@
 <script setup lang="ts">
-    //import { defineComponent } from 'vue';
-    import { Ref, ref, onMounted, onBeforeUnmount } from 'vue'
+    import { computed } from 'vue'
+    import { useWeatherStore } from "./../stores/weather";
 
-    type Forecasts = {
-        date: string
-    }[];
+    const weatherStore = useWeatherStore();
 
-    const loading: Ref<boolean> = ref(false)
-    const post: Ref<null | Forecasts> = ref(null as null | Forecasts)
-    const websocket: Ref<WebSocket | null> = ref(null);
-
-    onMounted(async () => {
-        // fetch the data when the view is created and the data is
-        // already being observed
-        wsConnect();
-    })
-    onBeforeUnmount(async () => {
-        wsDisconnect()
-    })
-
-    function wsConnect() {
-        post.value = null;
-        loading.value = true;
-
-        const url = new URL('/api/ws', location.href);
-        url.protocol = url.protocol.replace('http', 'ws');
-        var ws = new WebSocket(url);
-
-        ws.onopen = (event) => {
-            console.log("WebSocket connection opened:", event);
-        };
-        ws.onmessage = (event) => {
-            console.log("WebSocket message received:", event.data);
-
-            try {
-                var forecasts = JSON.parse(event.data) as Forecasts
-                if (forecasts) {
-                    post.value = forecasts;
-                    loading.value = false;
-                }
-            } catch (error) {
-                /* intentionally empty */
-            }
-        };
-        ws.onerror = (error) => {
-            console.log("WebSocket error:", error);
-        };
-
-        const ping = setInterval(() => {
-            const msg = `ping ${Date.now()}`;
-            ws.send(msg)
-            console.log("WebSocket message sent:", msg);
-        }, 60000);
-
-        ws.onclose = (event) => {
-            clearTimeout(ping);
-            console.log("WebSocket connection closed:", event.code);
-        };
-
-        websocket.value = ws;
-    }
-
-    function wsDisconnect() {
-        websocket.value?.close(1000, "Goodbye");
-        websocket.value = null;
-    }
+    const loading = computed(() => 0 < (weatherStore.forecasts?.length ?? 0))
+    const post = computed(() => weatherStore.forecasts)
 </script>
 
 <template>
